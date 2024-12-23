@@ -1,0 +1,9 @@
+[project]
+name = "landmark"
+version = "0.1"
+dependencies = [
+    "pandas",
+    "requests",
+    "selenium",
+    "tqdm",
+]
