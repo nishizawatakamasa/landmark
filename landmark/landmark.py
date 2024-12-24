@@ -21,12 +21,12 @@ with Landmark() as lm:
                 'No.': lm.num,
                 '列名': lm.txt_c(lm.first(lm.re_filter(r'', lm.select(r'', elem)))),
             })
-            lm.store_img(f'../analyses/hoge/fuga/{lm.num}_img_name.png', lm.select(r'', elem))
-            lm.store_screenshot(f'../analyses/hoge/fuga/{lm.num}_ss_name.png', lm.select(r'', elem))
+            lm.store_img(f'../hoge/{lm.num}_img_name.png', lm.select(r'', elem))
+            lm.store_screenshot(f'../hoge/{lm.num}_ss_name.png', lm.select(r'', elem))
     
     main_hrefs = ['']
     fuga_hrefs = scrape_fuga(main_hrefs)
-    lm.init_df_storage('../analyses/hoge/fuga/piyo.parquet')
+    lm.init_df_storage('../hoge/fuga.parquet')
     lm.init_num()
     scrape_piyo(fuga_hrefs)
 '''
