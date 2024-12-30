@@ -11,18 +11,18 @@ with Landmark() as lm:
 
     @lm.crawl_and_return_hrefs
     def scrape_fuga():
-        lm.save_hrefs([lm.href(elem) for elem in lm.select(r'')])
+        lm.save_hrefs([lm.href(e) for e in lm.ss(r'')])
         
     @lm.crawl
     def scrape_piyo():
-        for elem in lm.select(r''):
+        for e in lm.ss(r''):
             lm.count_up_num()
             lm.store_df_row({
                 'No.': lm.num,
-                '列名': lm.txt_c(lm.first(lm.re_filter(r'', lm.select(r'', elem)))),
+                '列名': lm.txt_c(lm.s_re(r'', r'', e)),
             })
-            lm.store_img(f'../hoge/{lm.num}_img_name.png', lm.select(r'', elem))
-            lm.store_screenshot(f'../hoge/{lm.num}_ss_name.png', lm.select(r'', elem))
+            lm.store_img(f'../hoge/{lm.num}_img_name.png', lm.s(r'', e))
+            lm.store_screenshot(f'../hoge/{lm.num}_ss_name.png', lm.s(r'', e))
     
     main_hrefs = ['']
     fuga_hrefs = scrape_fuga(main_hrefs)
@@ -38,7 +38,7 @@ import unicodedata as ud
 from collections.abc import Callable, Generator
 from tkinter import messagebox
 from types import TracebackType
-from typing import Final, NoReturn, Self, Literal
+from typing import Final, NoReturn, Self, Literal, Iterable
 from urllib.parse import urlencode
 
 import pandas as pd
@@ -154,19 +154,31 @@ class Landmark:
         '''渡されたWeb要素の弟要素を取得。'''
         return self._driver.execute_script('return arguments[0].nextElementSibling;', elem) if elem else None
 
-    def select(self, selector: str, from_: Literal['driver'] | WebElement | None = 'driver') -> list[WebElement]:
-        '''セレクタを使用し、DOM(全体かサブセット)からWeb要素をリストで取得。'''
-        if from_ == 'driver':
-            return self._driver.find_elements(By.CSS_SELECTOR, selector)
-        return [] if from_ is None else from_.find_elements(By.CSS_SELECTOR, selector)
+    def first(self, elems: list[WebElement]) -> WebElement | None:
+        '''Web要素リストの中の、最初の一つを返す。'''
+        return elems[0] if elems else None
 
     def re_filter(self, pattern: str, elems: list[WebElement]) -> list[WebElement]:
         '''Web要素を正規表現でフィルターにかける。'''
         return [elem for elem in elems if self.extract(pattern, self.txt_c(elem))]
+
+    def ss(self, selector: str, from_: Literal['driver'] | WebElement | None = 'driver') -> list[WebElement]:
+        '''セレクタを使用し、DOM(全体かサブセット)からWeb要素をリストで取得。'''
+        if from_ == 'driver':
+            return self._driver.find_elements(By.CSS_SELECTOR, selector)
+        return [] if from_ is None else from_.find_elements(By.CSS_SELECTOR, selector)
     
-    def first(self, elems: list[WebElement]) -> WebElement | None:
-        '''Web要素リストの中の、最初の一つを返す。'''
-        return elems[0] if elems else None
+    def ss_re(self, selector: str, pattern: str, from_: Literal['driver'] | WebElement | None = 'driver') -> list[WebElement]:
+        '''ショートハンド。re_filter(ss())'''
+        return self.re_filter(pattern, self.ss(selector, from_))
+
+    def s(self, selector: str, from_: Literal['driver'] | WebElement | None = 'driver') -> WebElement | None:
+        '''ショートハンド。first(ss())'''
+        return self.first(self.ss(selector, from_))
+
+    def s_re(self, selector: str, pattern: str, from_: Literal['driver'] | WebElement | None = 'driver') -> WebElement | None:
+        '''ショートハンド。first(re_filter(ss()))'''
+        return self.first(self.re_filter(pattern, self.ss(selector, from_)))
     
     def landmark(self, elems: list[WebElement], class_name: str) -> None:
         '''Web要素に任意のクラスを追加する。
@@ -357,12 +369,16 @@ class Landmark:
     def num(self):
         '''_count_upの値を格納し、スクレイピングの件数ごとに番号を振っていく。'''
         return self._num
-
+    
+    def use_tqdm(self, items: Iterable, target_func: Callable) -> tqdm:
+        '''繰り返し処理を行う関数の進捗状況を表示する。'''
+        return tqdm.tqdm(items, desc=f'{target_func.__name__}', bar_format=self._TQDM_BAR_FORMAT)
+    
     def crawl(self, proc_page: Callable[[], None]) -> Callable[[list[str]], None]:
         '''渡されたpage_urlsの各ページに対し、proc_pageが実行されるようになる。'''
         @functools.wraps(proc_page)
         def wrapper(page_urls: list[str]) -> None:
-            for page_url in tqdm.tqdm(page_urls, desc=f'{proc_page.__name__}', bar_format=self._TQDM_BAR_FORMAT):
+            for page_url in self.use_tqdm(page_urls, proc_page):
                 self.go_to(page_url)
                 proc_page()
         return wrapper
@@ -372,7 +388,7 @@ class Landmark:
         @functools.wraps(proc_page)
         def wrapper(parent_page_urls: list[str]) -> list[str]:
             self._child_page_hrefs = []
-            for parent_page_url in tqdm.tqdm(parent_page_urls, desc=f'{proc_page.__name__}', bar_format=self._TQDM_BAR_FORMAT):
+            for parent_page_url in self.use_tqdm(parent_page_urls, proc_page):
                 self.go_to(parent_page_url)
                 proc_page()
             return self._child_page_hrefs
