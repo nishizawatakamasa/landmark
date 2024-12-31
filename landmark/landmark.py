@@ -70,7 +70,7 @@ class Landmark:
         _TQDM_BAR_FORMAT:
             tqdmの表示設定用。
     '''
-    def __init__(self, user_data_dir: str | None = None, profile_directory: str | None = None, img_disp: bool = False) -> None:
+    def __init__(self, user_data_dir: str | None = None, profile_directory: str | None = None, img_disp: bool = True) -> None:
         '''初期化メソッド。
         
         Args:
@@ -118,6 +118,11 @@ class Landmark:
         texts = re.findall(pattern, string)
         return texts[0] if texts else ''
 
+    def attr_value(self, attr_name: str, elem: WebElement | None) -> str:
+        '''Web要素から任意の属性値を取得。'''
+        attr_value = elem.get_attribute(attr_name) if elem else ''
+        return self._strip_and_normalize(attr_value) if attr_value else ''
+    
     def txt_c(self, elem: WebElement | None) -> str:
         '''Web要素からtextContent属性値を取得。'''
         txt_c = elem.get_attribute('textContent') if elem else ''
