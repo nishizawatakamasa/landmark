@@ -6,29 +6,29 @@ from landmark import Landmark
 
 with Landmark() as lm:
     @lm.crawl
-    def proc_hoge():
+    def proc_foo():
         pass
 
     @lm.crawl_and_return_hrefs
-    def scrape_fuga():
-        lm.save_hrefs([lm.href(e) for e in lm.ss(r'')])
+    def scrape_bar():
+        lm.save_hrefs(lm.hrefs(lm.ss(r'')))
         
     @lm.crawl
-    def scrape_piyo():
+    def scrape_baz():
         for e in lm.ss(r''):
             lm.count_up_num()
             lm.store_df_row({
                 'No.': lm.num,
                 '列名': lm.txt_c(lm.s_re(r'', r'', e)),
             })
-            lm.store_img(f'../hoge/{lm.num}_img_name.png', lm.s(r'', e))
-            lm.store_screenshot(f'../hoge/{lm.num}_ss_name.png', lm.s(r'', e))
+            lm.store_img(f'../foo/{lm.num}_img_name.png', lm.s(r'', e))
+            lm.store_screenshot(f'../foo/{lm.num}_ss_name.png', lm.s(r'', e))
     
     main_hrefs = ['']
-    fuga_hrefs = scrape_fuga(main_hrefs)
-    lm.init_df_storage('../hoge/fuga.parquet')
+    bar_hrefs = scrape_bar(main_hrefs)
+    lm.init_df_storage('../foo/bar.parquet')
     lm.init_num()
-    scrape_piyo(fuga_hrefs)
+    scrape_baz(bar_hrefs)
 '''
 import functools
 import re
@@ -117,7 +117,11 @@ class Landmark:
         '''正規表現を使用し、文字列から部分文字列を一つだけ抽出。'''
         texts = re.findall(pattern, string)
         return texts[0] if texts else ''
-
+    
+    def _strip_and_normalize(self, text: str) -> str:
+        '''テキストをstrip&NFKC正規化する。'''
+        return ud.normalize('NFKC', text.strip())
+    
     def attr_value(self, attr_name: str, elem: WebElement | None) -> str:
         '''Web要素から任意の属性値を取得。'''
         attr_value = elem.get_attribute(attr_name) if elem else ''
@@ -142,10 +146,26 @@ class Landmark:
         '''Web要素からsrc属性値を取得。'''
         src = elem.get_attribute('src') if elem else ''
         return src if src else ''
-        
-    def _strip_and_normalize(self, text: str) -> str:
-        '''テキストをstrip&NFKC正規化する。'''
-        return ud.normalize('NFKC', text.strip())
+    
+    def attr_values(self, attr_name: str, elems: list[WebElement]) -> list[str]:
+        '''Web要素リストから任意の属性値リストを取得。'''
+        return [self.attr_value(attr_name, elem) for elem in elems]
+    
+    def txt_cs(self, elems: list[WebElement]) -> list[str]:
+        '''Web要素リストからtextContent属性値リストを取得。'''
+        return [self.txt_c(elem) for elem in elems]
+    
+    def i_txts(self, elems: list[WebElement]) -> list[str]:
+        '''Web要素リストからinnerText属性値リストを取得。'''
+        return [self.i_txt(elem) for elem in elems]
+    
+    def hrefs(self, elems: list[WebElement]) -> list[str]:
+        '''Web要素リストからhref属性値リストを取得。'''
+        return [self.href(elem) for elem in elems]
+    
+    def srcs(self, elems: list[WebElement]) -> list[str]:
+        '''Web要素リストからsrc属性値リストを取得。'''
+        return [self.src(elem) for elem in elems]
     
     def parent(self, elem: WebElement | None) -> WebElement | None:
         '''渡されたWeb要素の親要素を取得。'''
