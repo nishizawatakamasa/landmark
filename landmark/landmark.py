@@ -5,15 +5,15 @@ Template
 from landmark import Landmark
 
 with Landmark() as lm:
-    @lm.crawl
+    @lm.crl
     def proc_foo():
         pass
 
-    @lm.crawl_and_return_hrefs
-    def scrape_bar():
+    @lm.crl_h
+    def bar():
         lm.save_hrefs(lm.hrefs(lm.ss(r'')))
         
-    @lm.crawl
+    @lm.crl
     def scrape_baz():
         for e in lm.ss(r''):
             lm.count_up_num()
@@ -24,11 +24,9 @@ with Landmark() as lm:
             lm.store_img(f'../foo/{lm.num}_img_name.png', lm.s(r'', e))
             lm.store_screenshot(f'../foo/{lm.num}_ss_name.png', lm.s(r'', e))
     
-    main_hrefs = ['']
-    bar_hrefs = scrape_bar(main_hrefs)
-    lm.init_df_storage('../foo/bar.parquet')
     lm.init_num()
-    scrape_baz(bar_hrefs)
+    lm.init_df_storage('../foo/bar.parquet')
+    scrape_baz(bar(['']))
 '''
 import functools
 import re
@@ -96,9 +94,9 @@ class Landmark:
         self._child_page_hrefs: list[str]
         self._count_up: Generator[int, None, NoReturn]
         self._df_path: str
-        self._num: int
         self._value_dicts: list[dict[str, str]]
         self._TQDM_BAR_FORMAT: Final[str] = '{desc}  {percentage:3.0f}%  {elapsed}  {remaining}'
+        self._num: int
     
     def __enter__(self) -> Self:
         '''with文開始時にインスタンスを戻す（asエイリアスで受ける）。'''
@@ -287,25 +285,6 @@ class Landmark:
                 self._driver.close()
                 self._driver.switch_to.window(self._driver.window_handles[-1])
     
-    def store_img(self, img_path: str, img_elem: WebElement | None) -> None:
-        '''渡されたimg要素から画像データを取得し、pngファイルとして保存。'''
-        if img_elem:
-            try:
-                response = requests.get(img_elem.get_attribute('src'))
-            except InvalidSchema as e:
-                print(f'{type(e).__name__}: {e}')
-            else:
-                time.sleep(1)
-                with open(img_path, 'wb') as f:
-                    f.write(response.content)
-
-    def store_screenshot(self, screenshot_path: str, target_elem: WebElement | None) -> None:
-        '''渡されたWeb要素のスクリーンショットをpngファイルとして保存。'''
-        if target_elem:
-            self._driver.execute_script('arguments[0].scrollIntoView({behavior: "instant", block: "end", inline: "nearest"});', target_elem)
-            time.sleep(3)
-            target_elem.screenshot(screenshot_path)
-    
     def pause_proc(self, message: str) -> None:
         '''処理を一時停止(ダイアログを表示)。'''
         root = tk.Tk()
@@ -315,15 +294,15 @@ class Landmark:
         root.destroy()
     
     def save_href(self, href: str) -> None:
-        '''子ページのhrefを格納。crawl_and_return_hrefsと使用。'''
+        '''子ページのhrefを格納。crl_hと使用。'''
         self._child_page_hrefs.append(href)
 
     def save_hrefs(self, hrefs: list[str]) -> None:
-        '''子ページのhrefリストを格納（結合）。crawl_and_return_hrefsと使用。'''
+        '''子ページのhrefリストを格納（結合）。crl_hと使用。'''
         self._child_page_hrefs.extend(hrefs)
     
-    def save_hrefs_by_select_next_page1(self, select_next_button: Callable[[], WebElement], by_click: bool = False) -> None:
-        '''子ページのhrefを取得して格納。crawl_and_return_hrefsと使用。
+    def save_next_hrefs1(self, select_next_button: Callable[[], WebElement], by_click: bool = False) -> None:
+        '''子ページのhrefを取得して格納。crl_hと使用。
         
         Note:
             nextボタンをセレクタ(&パターン)で特定し、そのhrefを開いて(by_click=Trueならばクリックして)取得していく。\n
@@ -337,8 +316,8 @@ class Landmark:
             else:
                 break
 
-    def save_hrefs_by_select_next_page2(self, select_prev_and_next_button: Callable[[], list[WebElement]], by_click: bool = False) -> None:
-        '''子ページのhrefを取得して格納。crawl_and_return_hrefsと使用。
+    def save_next_hrefs2(self, select_prev_and_next_button: Callable[[], list[WebElement]], by_click: bool = False) -> None:
+        '''子ページのhrefを取得して格納。crl_hと使用。
         
         Note:
             prev&nextボタンをセレクタ(&パターン)で特定し、nextのhrefを開いて(by_click=Trueならばクリックして)取得していく。\n
@@ -371,10 +350,53 @@ class Landmark:
         self._df_path = df_path
 
     def store_df_row(self, value_dict: dict[str, str]) -> None:
-        '''_value_dictsに列名と値が要素のvalue_dictをappendし、DataFrameとして保存。crawlと使用。'''
+        '''_value_dictsに列名と値が要素のvalue_dictをappendし、DataFrameとして保存。crlと使用。'''
         self._value_dicts.append(value_dict)
         pd.DataFrame(self._value_dicts).to_parquet(self._df_path)
         
+    def use_tqdm(self, items: Iterable, target_func: Callable) -> tqdm:
+        '''繰り返し処理を行う関数の進捗状況を表示する。'''
+        return tqdm.tqdm(items, desc=f'{target_func.__name__}', bar_format=self._TQDM_BAR_FORMAT)
+    
+    def crl(self, proc_page: Callable[[], None]) -> Callable[[list[str]], None]:
+        '''渡されたpage_urlsの各ページに対し、proc_pageが実行されるようになる。'''
+        @functools.wraps(proc_page)
+        def wrapper(page_urls: list[str]) -> None:
+            for page_url in self.use_tqdm(page_urls, proc_page):
+                self.go_to(page_url)
+                proc_page()
+        return wrapper
+    
+    def crl_h(self, proc_page: Callable[[], None]) -> Callable[[list[str]], list[str]]:
+        '''渡されたparent_page_urlsの各ページに対しproc_pageを実行し、取得した子ページのhrefをリストで返すようになる。'''
+        @functools.wraps(proc_page)
+        def wrapper(parent_page_urls: list[str]) -> list[str]:
+            self._child_page_hrefs = []
+            for parent_page_url in self.use_tqdm(parent_page_urls, proc_page):
+                self.go_to(parent_page_url)
+                proc_page()
+            return self._child_page_hrefs
+        return wrapper
+    
+    def store_img(self, img_path: str, img_elem: WebElement | None) -> None:
+        '''渡されたimg要素から画像データを取得し、pngファイルとして保存。'''
+        if img_elem:
+            try:
+                response = requests.get(img_elem.get_attribute('src'))
+            except InvalidSchema as e:
+                print(f'{type(e).__name__}: {e}')
+            else:
+                time.sleep(1)
+                with open(img_path, 'wb') as f:
+                    f.write(response.content)
+
+    def store_screenshot(self, screenshot_path: str, target_elem: WebElement | None) -> None:
+        '''渡されたWeb要素のスクリーンショットをpngファイルとして保存。'''
+        if target_elem:
+            self._driver.execute_script('arguments[0].scrollIntoView({behavior: "instant", block: "end", inline: "nearest"});', target_elem)
+            time.sleep(3)
+            target_elem.screenshot(screenshot_path)
+            
     def _count_up_generator(self) -> Generator[int, None, NoReturn]:
         '''1から順にカウントアップするジェネレータ関数。'''
         count = 0
@@ -394,28 +416,4 @@ class Landmark:
     def num(self):
         '''_count_upの値を格納し、スクレイピングの件数ごとに番号を振っていく。'''
         return self._num
-    
-    def use_tqdm(self, items: Iterable, target_func: Callable) -> tqdm:
-        '''繰り返し処理を行う関数の進捗状況を表示する。'''
-        return tqdm.tqdm(items, desc=f'{target_func.__name__}', bar_format=self._TQDM_BAR_FORMAT)
-    
-    def crawl(self, proc_page: Callable[[], None]) -> Callable[[list[str]], None]:
-        '''渡されたpage_urlsの各ページに対し、proc_pageが実行されるようになる。'''
-        @functools.wraps(proc_page)
-        def wrapper(page_urls: list[str]) -> None:
-            for page_url in self.use_tqdm(page_urls, proc_page):
-                self.go_to(page_url)
-                proc_page()
-        return wrapper
-    
-    def crawl_and_return_hrefs(self, proc_page: Callable[[], None]) -> Callable[[list[str]], list[str]]:
-        '''渡されたparent_page_urlsの各ページに対しproc_pageを実行し、取得した子ページのhrefをリストで返すようになる。'''
-        @functools.wraps(proc_page)
-        def wrapper(parent_page_urls: list[str]) -> list[str]:
-            self._child_page_hrefs = []
-            for parent_page_url in self.use_tqdm(parent_page_urls, proc_page):
-                self.go_to(parent_page_url)
-                proc_page()
-            return self._child_page_hrefs
-        return wrapper
     
