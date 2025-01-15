@@ -14,7 +14,7 @@ with Landmark() as lm:
         lm.save_hrefs(lm.hrefs(lm.ss(r'')))
         
     @lm.crl
-    def scrape_baz():
+    def scrp_baz():
         for e in lm.ss(r''):
             lm.count_up_num()
             lm.store_df_row({
@@ -26,7 +26,7 @@ with Landmark() as lm:
     
     lm.init_num()
     lm.init_df_storage('../foo/bar.parquet')
-    scrape_baz(bar(['']))
+    scrp_baz(bar(['']))
 '''
 import functools
 import re
@@ -116,34 +116,26 @@ class Landmark:
         texts = re.findall(pattern, string)
         return texts[0] if texts else ''
     
-    def _strip_and_normalize(self, text: str) -> str:
-        '''テキストをstrip&NFKC正規化する。'''
-        return ud.normalize('NFKC', text.strip())
-    
     def attr_value(self, attr_name: str, elem: WebElement | None) -> str:
         '''Web要素から任意の属性値を取得。'''
         attr_value = elem.get_attribute(attr_name) if elem else ''
-        return self._strip_and_normalize(attr_value) if attr_value else ''
+        return attr_value.strip() if attr_value else ''
     
     def txt_c(self, elem: WebElement | None) -> str:
         '''Web要素からtextContent属性値を取得。'''
-        txt_c = elem.get_attribute('textContent') if elem else ''
-        return self._strip_and_normalize(txt_c) if txt_c else ''
+        return self.attr_value('textContent', elem)
     
     def i_txt(self, elem: WebElement | None) -> str:
         '''Web要素からinnerText属性値を取得。'''
-        i_txt = elem.get_attribute('innerText') if elem else ''
-        return self._strip_and_normalize(i_txt) if i_txt else ''
+        return self.attr_value('innerText', elem)
     
     def href(self, elem: WebElement | None) -> str:
         '''Web要素からhref属性値を取得。'''
-        href = elem.get_attribute('href') if elem else ''
-        return href if href else ''
+        return self.attr_value('href', elem)
     
     def src(self, elem: WebElement | None) -> str:
         '''Web要素からsrc属性値を取得。'''
-        src = elem.get_attribute('src') if elem else ''
-        return src if src else ''
+        return self.attr_value('src', elem)
     
     def attr_values(self, attr_name: str, elems: list[WebElement]) -> list[str]:
         '''Web要素リストから任意の属性値リストを取得。'''
@@ -182,8 +174,8 @@ class Landmark:
         return elems[0] if elems else None
 
     def re_filter(self, pattern: str, elems: list[WebElement]) -> list[WebElement]:
-        '''Web要素を正規表現でフィルターにかける。'''
-        return [elem for elem in elems if self.extract(pattern, self.txt_c(elem))]
+        '''Web要素のtextContent属性値をNFKC正規化し、正規表現でフィルターにかける。'''
+        return [elem for elem in elems if self.extract(pattern, ud.normalize('NFKC', self.txt_c(elem)))]
 
     def ss(self, selector: str, from_: Literal['driver'] | WebElement | None = 'driver') -> list[WebElement]:
         '''セレクタを使用し、DOM(全体かサブセット)からWeb要素をリストで取得。'''
