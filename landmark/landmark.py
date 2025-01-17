@@ -107,7 +107,7 @@ class Landmark:
         self._driver.quit()
     
     @property
-    def driver(self):
+    def driver(self) -> Chrome:
         '''Chromeクラスのオブジェクト。'''
         return self._driver
 
@@ -405,7 +405,7 @@ class Landmark:
         self._num = next(self._count_up)
     
     @property
-    def num(self):
+    def num(self) ->int:
         '''_count_upの値を格納し、スクレイピングの件数ごとに番号を振っていく。'''
         return self._num
     
