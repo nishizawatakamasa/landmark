@@ -118,8 +118,10 @@ class Landmark:
     
     def attr_value(self, attr_name: str, elem: WebElement | None) -> str:
         '''Web要素から任意の属性値を取得。'''
-        attr_value = elem.get_attribute(attr_name) if elem else ''
-        return attr_value.strip() if attr_value else ''
+        if elem:
+            if attr_value := elem.get_attribute(attr_name):
+                return attr_value.strip()
+        return ''
     
     def txt_c(self, elem: WebElement | None) -> str:
         '''Web要素からtextContent属性値を取得。'''
