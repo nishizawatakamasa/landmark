@@ -145,19 +145,19 @@ class Landmark:
     
     def txt_cs(self, elems: list[WebElement]) -> list[str]:
         '''Web要素リストからtextContent属性値リストを取得。'''
-        return [self.txt_c(elem) for elem in elems]
+        return self.attr_values('textContent', elems)
     
     def i_txts(self, elems: list[WebElement]) -> list[str]:
         '''Web要素リストからinnerText属性値リストを取得。'''
-        return [self.i_txt(elem) for elem in elems]
+        return self.attr_values('innerText', elems)
     
     def hrefs(self, elems: list[WebElement]) -> list[str]:
         '''Web要素リストからhref属性値リストを取得。'''
-        return [self.href(elem) for elem in elems]
+        return self.attr_values('href', elems)
     
     def srcs(self, elems: list[WebElement]) -> list[str]:
         '''Web要素リストからsrc属性値リストを取得。'''
-        return [self.src(elem) for elem in elems]
+        return self.attr_values('src', elems)
     
     def parent(self, elem: WebElement | None) -> WebElement | None:
         '''渡されたWeb要素の親要素を取得。'''
@@ -323,7 +323,7 @@ class Landmark:
         self.save_href(self.driver.current_url)
         first_page = True
         while True:
-            prev_and_next = select_prev_and_next_button() if by_click else [self.href(elem) for elem in select_prev_and_next_button()]
+            prev_and_next = select_prev_and_next_button() if by_click else self.hrefs(select_prev_and_next_button())
             match len(prev_and_next):
                 case 0:
                     break
