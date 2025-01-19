@@ -407,7 +407,7 @@ class Landmark:
         self._num = next(self._count_up)
     
     @property
-    def num(self) ->int:
+    def num(self) -> int:
         '''_count_upの値を格納し、スクレイピングの件数ごとに番号を振っていく。'''
         return self._num
     
