@@ -279,6 +279,18 @@ class Landmark:
                 self._driver.close()
                 self._driver.switch_to.window(self._driver.window_handles[-1])
     
+    def switch_to(self, iframe_elem: WebElement) -> None:
+        '''指定したiframeの中に制御を移す。'''
+        self._driver.switch_to.frame(iframe_elem)
+    
+    def switch_to_parent(self) -> None:
+        '''一つ上の親フレームに制御を移す。'''
+        self._driver.switch_to.parent_frame()
+        
+    def switch_to_top(self) -> None:
+        '''トップフレームに制御を移す。'''
+        self._driver.switch_to.default_content()
+            
     def pause_proc(self, message: str) -> None:
         '''処理を一時停止(ダイアログを表示)。'''
         root = tk.Tk()
