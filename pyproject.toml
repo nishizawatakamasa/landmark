@@ -6,4 +6,5 @@ dependencies = [
     'requests >= 2.32.3',
     'selenium >= 4.27.1',
     'tqdm >= 4.67.1',
+    'pyarrow >= 15.0.2',
 ]
