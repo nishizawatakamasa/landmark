@@ -290,6 +290,12 @@ class Landmark:
     def switch_to_top(self) -> None:
         '''トップフレームに制御を移す。'''
         self._driver.switch_to.default_content()
+    
+    def scroll_to_view(self, elem: WebElement | None) -> None:
+        '''スクロールして、指定Web要素を表示する。'''
+        if elem:
+            self._driver.execute_script('arguments[0].scrollIntoView({behavior: "instant", block: "end", inline: "nearest"});', elem)
+            time.sleep(1)
             
     def pause_proc(self, message: str) -> None:
         '''処理を一時停止(ダイアログを表示)。'''
