@@ -281,7 +281,9 @@ class Landmark:
     
     def switch_to(self, iframe_elem: WebElement) -> None:
         '''指定したiframeの中に制御を移す。'''
-        self._driver.switch_to.frame(iframe_elem)
+        self.scroll_to_view(iframe_elem)
+        if iframe_elem:
+            self._driver.switch_to.frame(iframe_elem)
     
     def switch_to_parent(self) -> None:
         '''一つ上の親フレームに制御を移す。'''
@@ -404,9 +406,9 @@ class Landmark:
 
     def store_screenshot(self, screenshot_path: str, target_elem: WebElement | None) -> None:
         '''渡されたWeb要素のスクリーンショットをpngファイルとして保存。'''
+        self.scroll_to_view(target_elem)
         if target_elem:
-            self._driver.execute_script('arguments[0].scrollIntoView({behavior: "instant", block: "end", inline: "nearest"});', target_elem)
-            time.sleep(3)
+            time.sleep(2)
             target_elem.screenshot(screenshot_path)
             
     def _count_up_generator(self) -> Generator[int, None, NoReturn]:
