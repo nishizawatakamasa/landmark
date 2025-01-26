@@ -1,48 +1,14 @@
-'''Chromeブラウザを自動操作するためのツール。
-
-Template
---------
-from landmark import Landmark
-
-with Landmark() as lm:
-    @lm.crl
-    def proc_foo():
-        pass
-
-    @lm.crl_h
-    def bar():
-        lm.save_hrefs(lm.hrefs(lm.ss(r'')))
-        
-    @lm.crl
-    def scrp_baz():
-        for e in lm.ss(r''):
-            lm.count_up_num()
-            lm.store_df_row({
-                'No.': lm.num,
-                '列名': lm.txt_c(lm.s_re(r'', r'', e)),
-            })
-            lm.store_img(f'../foo/{lm.num}_img_name.png', lm.s(r'', e))
-            lm.store_screenshot(f'../foo/{lm.num}_ss_name.png', lm.s(r'', e))
-    
-    lm.init_num()
-    lm.init_df_storage('../foo/bar.parquet')
-    scrp_baz(bar(['']))
-'''
+'''Chromeブラウザを自動操作するためのツール。'''
 import functools
 import re
 import time
-import tkinter as tk
 import unicodedata as ud
-from collections.abc import Callable, Generator
-from tkinter import messagebox
+from collections.abc import Callable
 from types import TracebackType
-from typing import Final, NoReturn, Self, Literal, Iterable
-from urllib.parse import urlencode
+from typing import Final, Self, Literal, Iterable
 
 import pandas as pd
-import requests
 import tqdm
-from requests.exceptions import InvalidSchema
 from selenium.webdriver import Chrome
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
@@ -57,16 +23,12 @@ class Landmark:
             Chromeクラスのオブジェクト。プロパティとしてもアクセスする。
         _child_page_hrefs:
             子ページのhrefを格納してreturnするためのリスト。
-        _count_up:
-            1から順にカウントアップするジェネレータイテレータ。
-        _df_path:
-            parquetファイルとして保存するDataFrameのパス。
+        _pq_path:
+            (DataFrame経由で)保存するparquetファイルのパス。
         _value_dicts:
             スクレイピング結果の辞書を保存するリスト。
         _TQDM_BAR_FORMAT:
             tqdmの表示設定用。
-        _num:
-            _count_upの値を格納し、スクレイピングの件数ごとに番号を振っていく。
     '''
     def __init__(self, user_data_dir: str | None = None, profile_directory: str | None = None, img_disp: bool = True) -> None:
         '''初期化。
@@ -92,11 +54,9 @@ class Landmark:
             options.add_experimental_option('prefs', {'profile.managed_default_content_settings.images': 2})
         self._driver: Chrome = Chrome(options=options)
         self._child_page_hrefs: list[str]
-        self._count_up: Generator[int, None, NoReturn]
-        self._df_path: str
+        self._pq_path: str
         self._value_dicts: list[dict[str, str]]
         self._TQDM_BAR_FORMAT: Final[str] = '{desc}  {percentage:3.0f}%  {elapsed}  {remaining}'
-        self._num: int
     
     def __enter__(self) -> Self:
         '''with文開始時にインスタンスを戻す（asエイリアスで受ける）。'''
@@ -301,15 +261,15 @@ class Landmark:
             self.click(next_) if by_click else self.go_to(next_)
             self.save_href(self.driver.current_url)
     
-    def init_df_storage(self, df_path: str) -> None:
-        '''DataFrameストレージの初期化。取得データから作成したDataFrameをparquetファイルとして保存したい場合に実行。'''
+    def init_pq_storage(self, pq_path: str) -> None:
+        '''Parquetストレージの初期化。取得データをparquetファイルとして保存したい場合に実行。'''
         self._value_dicts = []
-        self._df_path = df_path
+        self._pq_path = pq_path
 
-    def store_df_row(self, value_dict: dict[str, str]) -> None:
-        '''_value_dictsに列名と値が要素のvalue_dictをappendし、DataFrameとして保存。crlと使用。'''
+    def store_pq_row(self, value_dict: dict[str, str]) -> None:
+        '''_value_dictsに列名と値が要素のvalue_dictをappendし、DataFrame経由でparquetファイルとして保存。crlと使用。'''
         self._value_dicts.append(value_dict)
-        pd.DataFrame(self._value_dicts).to_parquet(self._df_path)
+        pd.DataFrame(self._value_dicts).to_parquet(self._pq_path)
         
     def use_tqdm(self, items: Iterable, target_func: Callable) -> tqdm:
         '''繰り返し処理を行う関数の進捗状況を表示する。'''
