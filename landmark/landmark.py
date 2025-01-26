@@ -69,7 +69,7 @@ class Landmark:
             _count_upの値を格納し、スクレイピングの件数ごとに番号を振っていく。
     '''
     def __init__(self, user_data_dir: str | None = None, profile_directory: str | None = None, img_disp: bool = True) -> None:
-        '''初期化メソッド。
+        '''初期化。
         
         Args:
             user_data_dir:
@@ -217,55 +217,6 @@ class Landmark:
         else:
             time.sleep(1)
     
-    def create_sequential_urls(self, common_part_of_url_1: str, num_range: tuple[int], common_part_of_url_2: str = '') -> list[str]:
-        '''連番URLを作成。
-        
-        Args:
-            common_part_of_url_1:
-                連番URLの共通部分(前半部分)。
-            num_range:
-                アンパックしてrangeの引数に渡し、連番を生成。
-            common_part_of_url_2:
-                連番URLの共通部分(後半部分、省略可)。
-        '''
-        return [common_part_of_url_1 + str(page_num) + common_part_of_url_2 for page_num in range(*num_range)]
-    
-    def create_google_search_url(self, search_words: list[str], english_search: bool = False, search_for_images: bool = False) -> str:
-        '''指定した複数のワードでgoogle検索をした結果のURLを作成。
-        
-        Args:
-            search_words:
-                検索ワードのリスト。
-            english_search:
-                Trueで英語検索。
-            search_for_images:
-                Trueで画像検索。
-        '''
-        query_dict = {'q': ' '.join(search_words), 'udm': '1'}
-        if english_search:
-            query_dict['gl'] = 'us'
-            query_dict['hl'] = 'en'
-        if search_for_images:
-            query_dict['udm'] = '2'
-        query_string = urlencode(query_dict)
-        return f'https://www.google.com/search?{query_string}'
-    
-    def create_google_map_search_url(self, search_words: list[str], english_search: bool = False) -> str:
-        '''指定した複数のワードでgoogleマップ検索をした結果のURLを作成。
-        
-        Args:
-            search_words:
-                検索ワードのリスト。
-            english_search:
-                Trueで英語検索。
-        '''
-        query_dict = {'output': 'search', 'q': ' '.join(search_words)}
-        if english_search:
-            query_dict['gl'] = 'us'
-            query_dict['hl'] = 'en'
-        query_string = urlencode(query_dict)
-        return f'https://maps.google.com/maps?{query_string}'
-
     def click(self, elem: WebElement, tab_switch: bool = True) -> None:
         '''指定したWeb要素をクリック(JavaScriptを使用し、要素のclickイベントを発生させる)。
         
@@ -299,14 +250,6 @@ class Landmark:
             self._driver.execute_script('arguments[0].scrollIntoView({behavior: "instant", block: "end", inline: "nearest"});', elem)
             time.sleep(1)
             
-    def pause_proc(self, message: str) -> None:
-        '''処理を一時停止(ダイアログを表示)。'''
-        root = tk.Tk()
-        root.attributes('-topmost', True)
-        root.withdraw()
-        messagebox.showinfo(message=message)
-        root.destroy()
-    
     def save_href(self, href: str) -> None:
         '''子ページのhrefを格納。crl_hと使用。'''
         self._child_page_hrefs.append(href)
@@ -391,43 +334,4 @@ class Landmark:
                 proc_page()
             return self._child_page_hrefs
         return wrapper
-    
-    def store_img(self, img_path: str, img_elem: WebElement | None) -> None:
-        '''渡されたimg要素から画像データを取得し、pngファイルとして保存。'''
-        if img_elem:
-            try:
-                response = requests.get(img_elem.get_attribute('src'))
-            except InvalidSchema as e:
-                print(f'{type(e).__name__}: {e}')
-            else:
-                time.sleep(1)
-                with open(img_path, 'wb') as f:
-                    f.write(response.content)
-
-    def store_screenshot(self, screenshot_path: str, target_elem: WebElement | None) -> None:
-        '''渡されたWeb要素のスクリーンショットをpngファイルとして保存。'''
-        self.scroll_to_view(target_elem)
-        if target_elem:
-            time.sleep(2)
-            target_elem.screenshot(screenshot_path)
-            
-    def _count_up_generator(self) -> Generator[int, None, NoReturn]:
-        '''1から順にカウントアップするジェネレータ関数。'''
-        count = 0
-        while True:
-            count += 1
-            yield count
-    
-    def init_num(self) -> None:
-        '''取得データ件数番号を初期化。'''
-        self._count_up = self._count_up_generator()
-        
-    def count_up_num(self) -> None:
-        '''取得データ件数番号を1からカウントアップ。'''
-        self._num = next(self._count_up)
-    
-    @property
-    def num(self) -> int:
-        '''_count_upの値を格納し、スクレイピングの件数ごとに番号を振っていく。'''
-        return self._num
     
