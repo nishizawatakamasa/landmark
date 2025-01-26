@@ -61,12 +61,12 @@ class Landmark:
             1から順にカウントアップするジェネレータイテレータ。
         _df_path:
             parquetファイルとして保存するDataFrameのパス。
-        _num:
-            _count_upの値を格納し、スクレイピングの件数ごとに番号を振っていく。
         _value_dicts:
             スクレイピング結果の辞書を保存するリスト。
         _TQDM_BAR_FORMAT:
             tqdmの表示設定用。
+        _num:
+            _count_upの値を格納し、スクレイピングの件数ごとに番号を振っていく。
     '''
     def __init__(self, user_data_dir: str | None = None, profile_directory: str | None = None, img_disp: bool = True) -> None:
         '''初期化メソッド。
