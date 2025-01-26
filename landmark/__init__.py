@@ -1,2 +1,2 @@
 from .landmark import Landmark
-from . import extra
+from .extra import extra
