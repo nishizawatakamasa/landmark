@@ -26,14 +26,14 @@ with Landmark() as lm:
 
     @lm.crl_h
     def bar():
-        lm.save_hrefs(lm.hrefs(lm.ss(r'')))
+        lm.save_hrefs([lm.attr('href', elem) for elem in lm.ss(r'')])
         
     @lm.crl
     def scrp_baz():
         for e in lm.ss(r''):
             lm.store_pq_row({
                 'URL': lm.driver.current_url,
-                '列名': lm.txt_c(lm.s_re(r'', r'', e)),
+                '列名': lm.attr('textContent', lm.s_re(r'', r'', e)),
             })
 
     lm.init_pq_storage('../foo/bar.parquet')
@@ -54,7 +54,7 @@ with Landmark() as lm:
 
     @lm.crl_h
     def bar():
-        lm.save_hrefs(lm.hrefs(lm.ss(r'')))
+        lm.save_hrefs([lm.attr('href', elem) for elem in lm.ss(r'')])
         
     @lm.crl
     def scrp_baz():
@@ -63,7 +63,7 @@ with Landmark() as lm:
             lm.store_pq_row({
                 'No.': c.num,
                 'URL': lm.driver.current_url,
-                '列名': lm.txt_c(lm.s_re(r'', r'', e)),
+                '列名': lm.attr('textContent', lm.s_re(r'', r'', e)),
             })
             ex.store_img(f'../foo/{c.num}_img_name.png', lm.s(r'', e))
             ex.store_screenshot(f'../foo/{c.num}_ss_name.png', lm.s(r'', e))
@@ -80,19 +80,19 @@ from landmark import Landmark
 with Landmark() as lm:   
     @lm.crl_h
     def prefectures():
-        lm.save_hrefs(lm.hrefs(lm.ss(r'li.item > ul > li > a')))
+        lm.save_hrefs([lm.attr('href', elem) for elem in lm.ss(r'li.item > ul > li > a')])
         
     @lm.crl_h
     def each_classroom():
-        lm.save_hrefs(lm.hrefs(lm.ss(r'.school-area h4 a')))
+        lm.save_hrefs([lm.attr('href', elem) for elem in lm.ss(r'.school-area h4 a')])
 
     @lm.crl
     def scrp_classroom_info():
         lm.store_pq_row({
             'URL': lm.driver.current_url,
-            '教室名': lm.txt_c(lm.s(r'h1 .text01')),
-            '住所': lm.txt_c(lm.s(r'.item .mapText')),
-            '電話番号': lm.txt_c(lm.s(r'.item .phoneNumber')),
+            '教室名': lm.attr('textContent', lm.s(r'h1 .text01')),
+            '住所': lm.attr('textContent', lm.s(r'.item .mapText')),
+            '電話番号': lm.attr('textContent', lm.s(r'.item .phoneNumber')),
         })
     
     lm.init_pq_storage('./classroom_info.parquet')
@@ -108,21 +108,21 @@ from landmark import Landmark
 with Landmark() as lm:
     @lm.crl_h
     def prefectures():
-        lm.save_hrefs(lm.hrefs(lm.ss(r'.region-item .pref-item a')))
+        lm.save_hrefs([lm.attr('href', elem) for elem in lm.ss(r'.region-item .pref-item a')])
         
     @lm.crl_h
     def each_office():
         lm.click(lm.s(r'#menu-btn'))
         time.sleep(2)
-        lm.save_hrefs(lm.hrefs(lm.ss(r'.container .detail-btn')))
+        lm.save_hrefs([lm.attr('href', elem) for elem in lm.ss(r'.container .detail-btn')])
         
     @lm.crl
     def scrp_office_info():
         items_elem = lm.s(r'.foo .item-list') or lm.s(r'.bar.baz .items')
         lm.store_pq_row({
             'URL': lm.driver.current_url,
-            '支店名': lm.txt_c(lm.s(r'li:nth-last-of-type(1)', items_elem)),
-            '住所': lm.txt_c(lm.next_sib(lm.s_re(r':is(h3.box, .inner dt)', r'住所'))),
+            '支店名': lm.attr('textContent', lm.s(r'li:nth-last-of-type(1)', items_elem)),
+            '住所': lm.attr('textContent', lm.next_sib(lm.s_re(r':is(h3.box, .inner dt)', r'住所'))),
         })
 
     lm.init_pq_storage('./scraped/office_info.parquet')
