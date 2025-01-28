@@ -1,4 +1,3 @@
-'''Chromeブラウザを自動操作するためのツール。'''
 import functools
 import re
 import time
@@ -16,7 +15,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import InvalidArgumentException, TimeoutException
 
 class Landmark:
-    '''簡単にブラウザの自動操作ができる。
+    '''ブラウザを自動操作するツール。
     
     Attributes:
         _driver:
@@ -30,7 +29,7 @@ class Landmark:
         _TQDM_BAR_FORMAT:
             tqdmの表示設定用。
     '''
-    def __init__(self, user_data_dir: str | None = None, profile_directory: str | None = None, img_disp: bool = True) -> None:
+    def __init__(self, user_data_dir: str | None = None, profile_directory: str | None = None) -> None:
         '''初期化。
         
         Args:
@@ -38,8 +37,6 @@ class Landmark:
                 使用するユーザープロファイルの保存先パス。
             profile_directory:
                 使用するユーザープロファイルのディレクトリ名。
-            img_disp:
-                ブラウザに画像を表示するかどうかをbool値で指定。
         Note:
             ※使用中のプロファイルはchrome://versionのプロフィールパス欄で確認できる。
             Chromeクラスをインスタンス化し、ウィンドウを起動。
@@ -50,8 +47,6 @@ class Landmark:
             options.add_argument(fr'--user-data-dir={user_data_dir}')
         if profile_directory:
             options.add_argument(f'--profile-directory={profile_directory}')
-        if not img_disp:
-            options.add_experimental_option('prefs', {'profile.managed_default_content_settings.images': 2})
         self._driver: Chrome = Chrome(options=options)
         self._child_page_hrefs: list[str]
         self._pq_path: str
@@ -71,53 +66,12 @@ class Landmark:
         '''Chromeクラスのオブジェクト。'''
         return self._driver
 
-    def extract(self, pattern: str, string: str) -> str | tuple[str]: 
-        '''正規表現を使用し、文字列から部分文字列を一つだけ抽出。'''
-        texts = re.findall(pattern, string)
-        return texts[0] if texts else ''
-    
-    def attr_value(self, attr_name: str, elem: WebElement | None) -> str:
+    def attr(self, attr_name: Literal['textContent', 'innerText', 'href', 'src'] | str, elem: WebElement | None) -> str:
         '''Web要素から任意の属性値を取得。'''
         if elem:
-            if attr_value := elem.get_attribute(attr_name):
-                return attr_value.strip()
+            if attr := elem.get_attribute(attr_name):
+                return attr.strip()
         return ''
-    
-    def txt_c(self, elem: WebElement | None) -> str:
-        '''Web要素からtextContent属性値を取得。'''
-        return self.attr_value('textContent', elem)
-    
-    def i_txt(self, elem: WebElement | None) -> str:
-        '''Web要素からinnerText属性値を取得。'''
-        return self.attr_value('innerText', elem)
-    
-    def href(self, elem: WebElement | None) -> str:
-        '''Web要素からhref属性値を取得。'''
-        return self.attr_value('href', elem)
-    
-    def src(self, elem: WebElement | None) -> str:
-        '''Web要素からsrc属性値を取得。'''
-        return self.attr_value('src', elem)
-    
-    def attr_values(self, attr_name: str, elems: list[WebElement]) -> list[str]:
-        '''Web要素リストから任意の属性値リストを取得。'''
-        return [self.attr_value(attr_name, elem) for elem in elems]
-    
-    def txt_cs(self, elems: list[WebElement]) -> list[str]:
-        '''Web要素リストからtextContent属性値リストを取得。'''
-        return self.attr_values('textContent', elems)
-    
-    def i_txts(self, elems: list[WebElement]) -> list[str]:
-        '''Web要素リストからinnerText属性値リストを取得。'''
-        return self.attr_values('innerText', elems)
-    
-    def hrefs(self, elems: list[WebElement]) -> list[str]:
-        '''Web要素リストからhref属性値リストを取得。'''
-        return self.attr_values('href', elems)
-    
-    def srcs(self, elems: list[WebElement]) -> list[str]:
-        '''Web要素リストからsrc属性値リストを取得。'''
-        return self.attr_values('src', elems)
     
     def parent(self, elem: WebElement | None) -> WebElement | None:
         '''渡されたWeb要素の親要素を取得。'''
@@ -137,7 +91,7 @@ class Landmark:
 
     def re_filter(self, pattern: str, elems: list[WebElement]) -> list[WebElement]:
         '''Web要素のtextContent属性値をNFKC正規化し、正規表現でフィルターにかける。'''
-        return [elem for elem in elems if self.extract(pattern, ud.normalize('NFKC', self.txt_c(elem)))]
+        return [elem for elem in elems if re.findall(pattern, ud.normalize('NFKC', self.attr('textContent', elem)))]
 
     def ss(self, selector: str, from_: Literal['driver'] | WebElement | None = 'driver') -> list[WebElement]:
         '''セレクタを使用し、DOM(全体かサブセット)からWeb要素をリストで取得。'''
@@ -196,14 +150,6 @@ class Landmark:
         if iframe_elem:
             self._driver.switch_to.frame(iframe_elem)
     
-    def switch_to_parent(self) -> None:
-        '''一つ上の親フレームに制御を移す。'''
-        self._driver.switch_to.parent_frame()
-        
-    def switch_to_top(self) -> None:
-        '''トップフレームに制御を移す。'''
-        self._driver.switch_to.default_content()
-    
     def scroll_to_view(self, elem: WebElement | None) -> None:
         '''スクロールして、指定Web要素を表示する。'''
         if elem:
@@ -226,7 +172,7 @@ class Landmark:
         '''
         self.save_href(self.driver.current_url)
         while True:
-            next_ = select_next_button() if by_click else self.href(select_next_button())
+            next_ = select_next_button() if by_click else self.attr('href', select_next_button())
             if next_:
                 self.click(next_) if by_click else self.go_to(next_)
                 self.save_href(self.driver.current_url)
@@ -246,7 +192,7 @@ class Landmark:
         self.save_href(self.driver.current_url)
         first_page = True
         while True:
-            prev_and_next = select_prev_and_next_button() if by_click else self.hrefs(select_prev_and_next_button())
+            prev_and_next = select_prev_and_next_button() if by_click else [self.attr('href', elem) for elem in select_prev_and_next_button()]
             match len(prev_and_next):
                 case 0:
                     break
