@@ -1,7 +1,6 @@
 # landmark
 
-## 概要
-Pythonのパッケージ。  
+## 概要 
 Seleniumのラッパー。  
 少ないコードで色々できる。
 
@@ -20,15 +19,15 @@ Seleniumのラッパー。
 from landmark import Landmark
 
 with Landmark() as lm:
-    @lm.crl
+    @lm.crawl
     def proc_foo():
         pass
 
-    @lm.crl_h
+    @lm.crawl_and_return_hrefs
     def bar():
-        lm.save_hrefs([lm.attr('href', elem) for elem in lm.ss(r'')])
+        return [lm.attr('href', e) for e in lm.ss(r'')]
         
-    @lm.crl
+    @lm.crawl
     def scrp_baz():
         for e in lm.ss(r''):
             lm.store_pq_row({
@@ -48,15 +47,15 @@ from landmark.extra import extra as ex
 c = ex.Counter()
 
 with Landmark() as lm:
-    @lm.crl
+    @lm.crawl
     def proc_foo():
         pass
 
-    @lm.crl_h
+    @lm.crawl_and_return_hrefs
     def bar():
-        lm.save_hrefs([lm.attr('href', elem) for elem in lm.ss(r'')])
+        return [lm.attr('href', e) for e in lm.ss(r'')]
         
-    @lm.crl
+    @lm.crawl
     def scrp_baz():
         for e in lm.ss(r''):
             c.count_up_num()
@@ -78,15 +77,15 @@ with Landmark() as lm:
 from landmark import Landmark
 
 with Landmark() as lm:   
-    @lm.crl_h
+    @lm.crawl_and_return_hrefs
     def prefectures():
-        lm.save_hrefs([lm.attr('href', elem) for elem in lm.ss(r'li.item > ul > li > a')])
+        return [lm.attr('href', e) for e in lm.ss(r'li.item > ul > li > a')]
         
-    @lm.crl_h
+    @lm.crawl_and_return_hrefs
     def each_classroom():
-        lm.save_hrefs([lm.attr('href', elem) for elem in lm.ss(r'.school-area h4 a')])
+        return [lm.attr('href', e) for e in lm.ss(r'.school-area h4 a')]
 
-    @lm.crl
+    @lm.crawl
     def scrp_classroom_info():
         lm.store_pq_row({
             'URL': lm.driver.current_url,
@@ -106,17 +105,17 @@ import time
 from landmark import Landmark
 
 with Landmark() as lm:
-    @lm.crl_h
+    @lm.crawl_and_return_hrefs
     def prefectures():
-        lm.save_hrefs([lm.attr('href', elem) for elem in lm.ss(r'.region-item .pref-item a')])
+        return [lm.attr('href', e) for e in lm.ss(r'.region-item .pref-item a')]
         
-    @lm.crl_h
+    @lm.crawl_and_return_hrefs
     def each_office():
         lm.click(lm.s(r'#menu-btn'))
         time.sleep(2)
-        lm.save_hrefs([lm.attr('href', elem) for elem in lm.ss(r'.container .detail-btn')])
+        return [lm.attr('href', e) for e in lm.ss(r'.container .detail-btn')]
         
-    @lm.crl
+    @lm.crawl
     def scrp_office_info():
         items_elem = lm.s(r'.foo .item-list') or lm.s(r'.bar.baz .items')
         lm.store_pq_row({
