@@ -20,8 +20,6 @@ class Landmark:
     Attributes:
         _driver:
             Chromeクラスのオブジェクト。プロパティとしてもアクセスする。
-        _child_page_hrefs:
-            子ページのhrefを格納してreturnするためのリスト。
         _pq_path:
             (DataFrame経由で)保存するparquetファイルのパス。
         _value_dicts:
@@ -48,7 +46,6 @@ class Landmark:
         if profile_directory:
             options.add_argument(f'--profile-directory={profile_directory}')
         self._driver: Chrome = Chrome(options=options)
-        self._child_page_hrefs: list[str]
         self._pq_path: str
         self._value_dicts: list[dict[str, str]]
         self._TQDM_BAR_FORMAT: Final[str] = '{desc}  {percentage:3.0f}%  {elapsed}  {remaining}'
@@ -156,40 +153,28 @@ class Landmark:
             self._driver.execute_script('arguments[0].scrollIntoView({behavior: "instant", block: "end", inline: "nearest"});', elem)
             time.sleep(1)
 
-    def save_href(self, href: str) -> None:
-        '''子ページのhrefを格納。crl_hと使用。'''
-        self._child_page_hrefs.append(href)
-
-    def save_hrefs(self, hrefs: list[str]) -> None:
-        '''子ページのhrefリストを格納（結合）。crl_hと使用。'''
-        self._child_page_hrefs.extend(hrefs)
-
-    def save_next_hrefs1(self, select_next_button: Callable[[], WebElement], by_click: bool = False) -> None:
-        '''子ページのhrefを取得して格納。crl_hと使用。
-
-        Note:
-            nextボタンをセレクタ(&パターン)で特定し、そのhrefを開いて(by_click=Trueならばクリックして)取得していく。\n
-        '''
-        self.save_href(self.driver.current_url)
+    def next_hrefs1(self, select_next_button: Callable[[], WebElement], by_click: bool = False) -> list[str]:
+        '''nextボタン要素を特定し、そのhrefを開きながら(by_click=Trueならばクリックしながら)取得していく。'''
+        hrefs = [self.driver.current_url]
         while True:
             next_ = select_next_button() if by_click else self.attr('href', select_next_button())
             if next_:
                 self.click(next_) if by_click else self.go_to(next_)
-                self.save_href(self.driver.current_url)
+                hrefs += [self.driver.current_url]
             else:
                 break
+        return hrefs
 
-    def save_next_hrefs2(self, select_prev_and_next_button: Callable[[], list[WebElement]], by_click: bool = False) -> None:
-        '''子ページのhrefを取得して格納。crl_hと使用。
+    def next_hrefs2(self, select_prev_and_next_button: Callable[[], list[WebElement]], by_click: bool = False) -> list[str]:
+        '''prev&nextボタン要素を特定し、nextのhrefを開きながら(by_click=Trueならばクリックしながら)取得していく。
 
         Note:
-            prev&nextボタンをセレクタ(&パターン)で特定し、nextのhrefを開いて(by_click=Trueならばクリックして)取得していく。\n
             *nextボタンの判別方法。\n
             1.最初はボタンが一つ。←それがnext。\n
             2.次からボタンが二つ。←二つ目がnext。\n
             3.最後にまたボタンが一つに。←それはprevだからnextは無し。
         '''
-        self.save_href(self.driver.current_url)
+        hrefs = [self.driver.current_url]
         first_page = True
         while True:
             prev_and_next = select_prev_and_next_button() if by_click else [self.attr('href', elem) for elem in select_prev_and_next_button()]
@@ -205,7 +190,8 @@ class Landmark:
                 case 2:
                     next_ = prev_and_next[1]
             self.click(next_) if by_click else self.go_to(next_)
-            self.save_href(self.driver.current_url)
+            hrefs += [self.driver.current_url]
+        return hrefs
 
     def init_pq_storage(self, pq_path: str) -> None:
         '''Parquetストレージの初期化。取得データをparquetファイルとして保存したい場合に実行。'''
@@ -213,7 +199,7 @@ class Landmark:
         self._pq_path = pq_path
 
     def store_pq_row(self, value_dict: dict[str, str]) -> None:
-        '''_value_dictsに列名と値が要素のvalue_dictをappendし、DataFrame経由でparquetファイルとして保存。crlと使用。'''
+        '''_value_dictsに列名と値が要素のvalue_dictをappendし、DataFrame経由でparquetファイルとして保存。'''
         self._value_dicts.append(value_dict)
         pd.DataFrame(self._value_dicts).to_parquet(self._pq_path)
 
@@ -222,7 +208,7 @@ class Landmark:
         return tqdm.tqdm(items, desc=f'{target_func.__name__}', bar_format=self._TQDM_BAR_FORMAT)
 
     def crawl(self, proc_page: Callable[[], None]) -> Callable[[list[str]], None]:
-        '''渡されたpage_urlsの各ページに対し、proc_pageが実行されるようになる。'''
+        '''page_urlsの各ページに対し、proc_pageが実行されるようになる。'''
         @functools.wraps(proc_page)
         def wrapper(page_urls: list[str]) -> None:
             for page_url in self.use_tqdm(page_urls, proc_page):
@@ -230,8 +216,8 @@ class Landmark:
                 proc_page()
         return wrapper
 
-    def crawl_and_return_hrefs(self, proc_page: Callable[[], None]) -> Callable[[list[str]], list[str]]:
-        '''渡されたparent_page_urlsの各ページに対しproc_pageを実行し、取得した子ページのhrefをリストで返すようになる。'''
+    def crawl_and_return_hrefs(self, proc_page: Callable[[], list[str]]) -> Callable[[list[str]], list[str]]:
+        '''page_urlsの各ページに対し、proc_pageの実行&hrefsの取得を行い、全hrefsを結合したhrefリストを返すようになる。'''
         @functools.wraps(proc_page)
         def wrapper(page_urls: list[str]) -> list[str]:
             hrefs = []
@@ -240,4 +226,3 @@ class Landmark:
                 hrefs += proc_page()
             return hrefs
         return wrapper
-
