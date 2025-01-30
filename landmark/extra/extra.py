@@ -46,7 +46,7 @@ class Counter:
         '''_count_upの値を格納し、スクレイピングの件数ごとに番号を振っていく。'''
         return self._num
 
-def store_img(img_path: str, img_elem: WebElement | None) -> None:
+def save_img(img_path: str, img_elem: WebElement | None) -> None:
     '''渡されたimg要素から画像データを取得し、pngファイルとして保存。'''
     if img_elem:
         try:
@@ -58,7 +58,7 @@ def store_img(img_path: str, img_elem: WebElement | None) -> None:
             with open(img_path, 'wb') as f:
                 f.write(response.content)
 
-def store_screenshot(screenshot_path: str, target_elem: WebElement | None, driver: Chrome) -> None:
+def save_screenshot(screenshot_path: str, target_elem: WebElement | None, driver: Chrome) -> None:
     '''渡されたWeb要素のスクリーンショットをpngファイルとして保存。'''
     if target_elem:
         driver.execute_script('arguments[0].scrollIntoView({behavior: "instant", block: "end", inline: "nearest"});', target_elem)
