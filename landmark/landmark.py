@@ -20,10 +20,8 @@ class Landmark:
     Attributes:
         _driver:
             Chromeクラスのオブジェクト。プロパティとしてもアクセスする。
-        _pq_path:
-            (DataFrame経由で)保存するparquetファイルのパス。
-        _value_dicts:
-            スクレイピング結果の辞書を保存するリスト。
+        _tables:
+            辞書。キーはテーブルデータの保存名。値はスクレイピング結果の辞書を格納したリスト。
         _TQDM_BAR_FORMAT:
             tqdmの表示設定用。
     '''
@@ -46,11 +44,8 @@ class Landmark:
         if profile_directory:
             options.add_argument(f'--profile-directory={profile_directory}')
         self._driver: Chrome = Chrome(options=options)
-        self._pq_path: str
-        self._value_dicts: list[dict[str, str]]
-        self._TQDM_BAR_FORMAT: Final[str] = '{desc}  {percentage:3.0f}%  {elapsed}  {remaining}'
-        
         self._tables: dict[str, list[dict[str, str]]] = {}
+        self._TQDM_BAR_FORMAT: Final[str] = '{desc}  {percentage:3.0f}%  {elapsed}  {remaining}'
 
     def __enter__(self) -> Self:
         '''with文開始時にインスタンスを戻す（asエイリアスで受ける）。'''
@@ -162,7 +157,7 @@ class Landmark:
             next_ = select_next_button() if by_click else self.attr('href', select_next_button())
             if next_:
                 self.click(next_) if by_click else self.go_to(next_)
-                hrefs += [self.driver.current_url]
+                hrefs.append(self.driver.current_url)
             else:
                 break
         return hrefs
@@ -192,16 +187,11 @@ class Landmark:
                 case 2:
                     next_ = prev_and_next[1]
             self.click(next_) if by_click else self.go_to(next_)
-            hrefs += [self.driver.current_url]
+            hrefs.append(self.driver.current_url)
         return hrefs
 
-    def init_pq_storage(self, pq_path: str) -> None:
-        '''Parquetストレージの初期化。取得データをparquetファイルとして保存したい場合に実行。'''
-        self._value_dicts = []
-        self._pq_path = pq_path
-
     def save_row(self, name_path: str, row: dict[str, str]) -> None:
-        '''_value_dictsに列名と値が要素のvalue_dictをappendし、DataFrame経由でparquetファイルとして保存。'''
+        '''指定した名前のテーブルデータ(無い場合は作成される)に行を追加。行は列名と値が要素の辞書。テーブルデータはparquetファイルとして保存される。'''
         if name_path not in self._tables.keys():
             self._tables[name_path] = []
         self._tables[name_path].append(row)
@@ -227,6 +217,6 @@ class Landmark:
             hrefs = []
             for page_url in self.use_tqdm(page_urls, proc_page):
                 self.go_to(page_url)
-                hrefs += proc_page()
+                hrefs.extend(proc_page())
             return hrefs
         return wrapper
