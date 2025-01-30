@@ -30,12 +30,11 @@ with Landmark() as lm:
     @lm.crawl
     def scrp_baz():
         for e in lm.ss(r''):
-            lm.store_pq_row({
+            lm.save_row('../foo/bar', {
                 'URL': lm.driver.current_url,
                 '列名': lm.attr('textContent', lm.s_re(r'', r'', e)),
             })
 
-    lm.init_pq_storage('../foo/bar.parquet')
     scrp_baz(bar(['']))
 ```
 
@@ -59,16 +58,15 @@ with Landmark() as lm:
     def scrp_baz():
         for e in lm.ss(r''):
             c.count_up_num()
-            lm.store_pq_row({
+            lm.save_row('../foo/bar', {
                 'No.': c.num,
                 'URL': lm.driver.current_url,
                 '列名': lm.attr('textContent', lm.s_re(r'', r'', e)),
             })
-            ex.store_img(f'../foo/{c.num}_img_name.png', lm.s(r'', e))
-            ex.store_screenshot(f'../foo/{c.num}_ss_name.png', lm.s(r'', e))
+            ex.save_img(f'../foo/{c.num}_img_name.png', lm.s(r'', e))
+            ex.save_screenshot(f'../foo/{c.num}_ss_name.png', lm.s(r'', e))
     
     c.init_num()
-    lm.init_pq_storage('../foo/bar.parquet')
     scrp_baz(bar(['']))
 ```
 
@@ -87,14 +85,13 @@ with Landmark() as lm:
 
     @lm.crawl
     def scrp_classroom_info():
-        lm.store_pq_row({
+        lm.save_row('./classroom_info', {
             'URL': lm.driver.current_url,
             '教室名': lm.attr('textContent', lm.s(r'h1 .text01')),
             '住所': lm.attr('textContent', lm.s(r'.item .mapText')),
             '電話番号': lm.attr('textContent', lm.s(r'.item .phoneNumber')),
         })
     
-    lm.init_pq_storage('./classroom_info.parquet')
     scrp_classroom_info(each_classroom(prefectures(['https://www.foobarbaz1.jp'])))
 ```
 
@@ -118,12 +115,11 @@ with Landmark() as lm:
     @lm.crawl
     def scrp_office_info():
         items_elem = lm.s(r'.foo .item-list') or lm.s(r'.bar.baz .items')
-        lm.store_pq_row({
+        lm.save_row('./scraped/office_info', {
             'URL': lm.driver.current_url,
             '支店名': lm.attr('textContent', lm.s(r'li:nth-last-of-type(1)', items_elem)),
             '住所': lm.attr('textContent', lm.next_sib(lm.s_re(r':is(h3.box, .inner dt)', r'住所'))),
         })
 
-    lm.init_pq_storage('./scraped/office_info.parquet')
     scrp_office_info(each_office(prefectures(['https://www.foobarbaz2.com'])))
 ```
