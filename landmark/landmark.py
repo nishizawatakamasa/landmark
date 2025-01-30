@@ -49,6 +49,8 @@ class Landmark:
         self._pq_path: str
         self._value_dicts: list[dict[str, str]]
         self._TQDM_BAR_FORMAT: Final[str] = '{desc}  {percentage:3.0f}%  {elapsed}  {remaining}'
+        
+        self._tables: dict[str, list[dict[str, str]]] = {}
 
     def __enter__(self) -> Self:
         '''with文開始時にインスタンスを戻す（asエイリアスで受ける）。'''
@@ -198,10 +200,12 @@ class Landmark:
         self._value_dicts = []
         self._pq_path = pq_path
 
-    def store_pq_row(self, value_dict: dict[str, str]) -> None:
+    def save_row(self, name_path: str, row: dict[str, str]) -> None:
         '''_value_dictsに列名と値が要素のvalue_dictをappendし、DataFrame経由でparquetファイルとして保存。'''
-        self._value_dicts.append(value_dict)
-        pd.DataFrame(self._value_dicts).to_parquet(self._pq_path)
+        if name_path not in self._tables.keys():
+            self._tables[name_path] = []
+        self._tables[name_path].append(row)
+        pd.DataFrame(self._tables[name_path]).to_parquet(f'{name_path}.parquet')
 
     def use_tqdm(self, items: Iterable, target_func: Callable) -> tqdm:
         '''繰り返し処理を行う関数の進捗状況を表示する。'''
