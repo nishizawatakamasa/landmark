@@ -60,12 +60,11 @@ class Landmark:
         '''Chromeクラスのオブジェクト。'''
         return self._driver
 
-    def attr(self, attr_name: Literal['textContent', 'innerText', 'href', 'src'] | str, elem: WebElement | None) -> str:
+    def attr(self, attr_name: Literal['textContent', 'innerText', 'href', 'src'] | str, elem: WebElement | None) -> str | None:
         '''Web要素から任意の属性値を取得。'''
         if elem:
-            if attr := elem.get_attribute(attr_name):
-                return attr.strip()
-        return ''
+            return attr.strip() if type(attr := elem.get_attribute(attr_name)) is str else attr
+        return None
 
     def parent(self, elem: WebElement | None) -> WebElement | None:
         '''渡されたWeb要素の親要素を取得。'''
