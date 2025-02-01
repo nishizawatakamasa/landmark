@@ -4,7 +4,7 @@ import time
 import unicodedata as ud
 from collections.abc import Callable
 from types import TracebackType
-from typing import Final, Self, Literal, Iterable
+from typing import Self, Literal, Iterable
 
 import pandas as pd
 import tqdm
@@ -22,8 +22,6 @@ class Landmark:
             Chromeクラスのオブジェクト。プロパティとしてもアクセスする。
         _tables:
             辞書。キーはテーブルデータの保存名。値はスクレイピング結果の辞書を格納したリスト。
-        _TQDM_BAR_FORMAT:
-            tqdmの表示設定用。
     '''
     def __init__(self, user_data_dir: str | None = None, profile_directory: str | None = None) -> None:
         '''初期化。
@@ -45,7 +43,6 @@ class Landmark:
             options.add_argument(f'--profile-directory={profile_directory}')
         self._driver: Chrome = Chrome(options=options)
         self._tables: dict[str, list[dict[str, str]]] = {}
-        self._TQDM_BAR_FORMAT: Final[str] = '{desc}  {percentage:3.0f}%  {elapsed}  {remaining}'
 
     def __enter__(self) -> Self:
         '''with文開始時にインスタンスを戻す（asエイリアスで受ける）。'''
@@ -63,7 +60,7 @@ class Landmark:
     def attr(self, attr_name: Literal['textContent', 'innerText', 'href', 'src'] | str, elem: WebElement | None) -> str | None:
         '''Web要素から任意の属性値を取得。'''
         if elem:
-            return attr.strip() if type(attr := elem.get_attribute(attr_name)) is str else attr
+            return attr.strip() if (attr := elem.get_attribute(attr_name)) else attr
         return None
 
     def parent(self, elem: WebElement | None) -> WebElement | None:
@@ -78,10 +75,6 @@ class Landmark:
         '''渡されたWeb要素の弟要素を取得。'''
         return self._driver.execute_script('return arguments[0].nextElementSibling;', elem) if elem else None
 
-    def first(self, elems: list[WebElement]) -> WebElement | None:
-        '''Web要素リストの中の、最初の一つを返す。'''
-        return elems[0] if elems else None
-
     def re_filter(self, pattern: str, elems: list[WebElement]) -> list[WebElement]:
         '''Web要素のtextContent属性値をNFKC正規化し、正規表現でフィルターにかける。'''
         return [elem for elem in elems if re.findall(pattern, ud.normalize('NFKC', self.attr('textContent', elem)))]
@@ -93,16 +86,16 @@ class Landmark:
         return [] if from_ is None else from_.find_elements(By.CSS_SELECTOR, selector)
 
     def ss_re(self, selector: str, pattern: str, from_: Literal['driver'] | WebElement | None = 'driver') -> list[WebElement]:
-        '''ショートハンド。re_filter(ss())'''
+        '''セレクタと正規表現を使用し、DOM(全体かサブセット)からWeb要素をリストで取得。'''
         return self.re_filter(pattern, self.ss(selector, from_))
 
     def s(self, selector: str, from_: Literal['driver'] | WebElement | None = 'driver') -> WebElement | None:
-        '''ショートハンド。first(ss())'''
-        return self.first(self.ss(selector, from_))
+        '''セレクタを使用し、DOM(全体かサブセット)からWeb要素を取得。'''
+        return elems[0] if (elems := self.ss(selector, from_)) else None
 
     def s_re(self, selector: str, pattern: str, from_: Literal['driver'] | WebElement | None = 'driver') -> WebElement | None:
-        '''ショートハンド。first(re_filter(ss()))'''
-        return self.first(self.re_filter(pattern, self.ss(selector, from_)))
+        '''セレクタと正規表現を使用し、DOM(全体かサブセット)からWeb要素を取得。'''
+        return elems[0] if (elems := self.ss_re(selector, pattern, from_)) else None
 
     def landmark(self, elems: list[WebElement], class_name: str) -> None:
         '''Web要素に任意のクラスを追加する。
@@ -198,24 +191,16 @@ class Landmark:
 
     def use_tqdm(self, items: Iterable, target_func: Callable) -> tqdm:
         '''繰り返し処理を行う関数の進捗状況を表示する。'''
-        return tqdm.tqdm(items, desc=f'{target_func.__name__}', bar_format=self._TQDM_BAR_FORMAT)
+        return tqdm.tqdm(items, desc=f'{target_func.__name__}', bar_format='{desc}  {percentage:3.0f}%  {elapsed}  {remaining}')
 
-    def crawl(self, proc_page: Callable[[], None]) -> Callable[[list[str]], None]:
-        '''page_urlsの各ページに対し、proc_pageが実行されるようになる。'''
-        @functools.wraps(proc_page)
-        def wrapper(page_urls: list[str]) -> None:
-            for page_url in self.use_tqdm(page_urls, proc_page):
-                self.go_to(page_url)
-                proc_page()
-        return wrapper
-
-    def crawl_and_return_hrefs(self, proc_page: Callable[[], list[str]]) -> Callable[[list[str]], list[str]]:
-        '''page_urlsの各ページに対し、proc_pageの実行&hrefsの取得を行い、全hrefsを結合したhrefリストを返すようになる。'''
+    def crawl(self, proc_page: Callable[[], list[str] | None]) -> Callable[[list[str]], list[str]]:
+        '''page_urlsの各ページに対し、proc_pageが実行されるようになる。さらにproc_pageがhrefsを返す場合、それら全てを結合したリストを返すようになる。'''
         @functools.wraps(proc_page)
         def wrapper(page_urls: list[str]) -> list[str]:
-            hrefs = []
+            urls = []
             for page_url in self.use_tqdm(page_urls, proc_page):
                 self.go_to(page_url)
-                hrefs.extend(proc_page())
-            return hrefs
+                if type(hrefs := proc_page()) is list:
+                    urls.extend(hrefs)
+            return urls
         return wrapper
