@@ -2,8 +2,8 @@ import functools
 import re
 import time
 import unicodedata as ud
-from collections.abc import Callable
-from typing import Literal, Iterable
+from collections.abc import Callable, Iterable
+from typing import Literal
 
 import pandas as pd
 import tqdm
@@ -161,14 +161,14 @@ class Landmark:
         '''繰り返し処理を行う関数の進捗状況を表示する。'''
         return tqdm.tqdm(items, desc=f'{target_func.__name__}', bar_format='{desc}  {percentage:3.0f}%  {elapsed}  {remaining}')
 
-    def crawl(self, proc_page: Callable[[], list[str] | None]) -> Callable[[list[str]], list[str]]:
+    def crawl(self, proc_page: Callable[[], Iterable[str] | None]) -> Callable[[list[str]], list[str]]:
         '''page_urlsの各ページに対し、proc_pageが実行されるようになる。さらにproc_pageがhrefsを返す場合、それら全てを結合したリストを返すようになる。'''
         @functools.wraps(proc_page)
         def wrapper(page_urls: list[str]) -> list[str]:
             urls = []
             for page_url in self.use_tqdm(page_urls, proc_page):
                 self.go_to(page_url)
-                if type(hrefs := proc_page()) is list:
+                if isinstance(hrefs := proc_page(), Iterable):
                     urls.extend(hrefs)
             return urls
         return wrapper
