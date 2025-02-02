@@ -3,15 +3,13 @@ import re
 import time
 import unicodedata as ud
 from collections.abc import Callable
-from types import TracebackType
-from typing import Self, Literal, Iterable
+from typing import Literal, Iterable
 
 import pandas as pd
 import tqdm
-from selenium.webdriver import Chrome
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import InvalidArgumentException, TimeoutException
 
 class Landmark:
@@ -19,43 +17,13 @@ class Landmark:
 
     Attributes:
         _driver:
-            Chromeクラスのオブジェクト。プロパティとしてもアクセスする。
+            WebDriverのインスタンス。
         _tables:
             辞書。キーはテーブルデータの保存名。値はスクレイピング結果の辞書を格納したリスト。
     '''
-    def __init__(self, user_data_dir: str | None = None, profile_directory: str | None = None) -> None:
-        '''初期化。
-
-        Args:
-            user_data_dir:
-                使用するユーザープロファイルの保存先パス。
-            profile_directory:
-                使用するユーザープロファイルのディレクトリ名。
-        Note:
-            ※使用中のプロファイルはchrome://versionのプロフィールパス欄で確認できる。
-            Chromeクラスをインスタンス化し、ウィンドウを起動。
-        '''
-        options: Options = Options()
-        options.add_argument('--start-maximized')
-        if user_data_dir:
-            options.add_argument(fr'--user-data-dir={user_data_dir}')
-        if profile_directory:
-            options.add_argument(f'--profile-directory={profile_directory}')
-        self._driver: Chrome = Chrome(options=options)
+    def __init__(self, driver: WebDriver) -> None:
+        self._driver = driver
         self._tables: dict[str, list[dict[str, str]]] = {}
-
-    def __enter__(self) -> Self:
-        '''with文開始時にインスタンスを戻す（asエイリアスで受ける）。'''
-        return self
-
-    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
-        '''with文終了時に、chrome driverのプロセスを完全終了。'''
-        self._driver.quit()
-
-    @property
-    def driver(self) -> Chrome:
-        '''Chromeクラスのオブジェクト。'''
-        return self._driver
 
     def attr(self, attr_name: Literal['textContent', 'innerText', 'href', 'src'] | str, elem: WebElement | None) -> str | None:
         '''Web要素から任意の属性値を取得。'''

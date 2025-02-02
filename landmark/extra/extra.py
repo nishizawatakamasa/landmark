@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 
 import requests
 from requests.exceptions import InvalidSchema
-from selenium.webdriver import Chrome
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
 class Counter:
@@ -58,7 +58,7 @@ def save_img(img_path: str, img_elem: WebElement | None) -> None:
             with open(img_path, 'wb') as f:
                 f.write(response.content)
 
-def save_screenshot(screenshot_path: str, target_elem: WebElement | None, driver: Chrome) -> None:
+def save_screenshot(screenshot_path: str, target_elem: WebElement | None, driver: WebDriver) -> None:
     '''渡されたWeb要素のスクリーンショットをpngファイルとして保存。'''
     if target_elem:
         driver.execute_script('arguments[0].scrollIntoView({behavior: "instant", block: "end", inline: "nearest"});', target_elem)
