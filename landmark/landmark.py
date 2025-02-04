@@ -78,9 +78,7 @@ class Landmark:
         '''指定したURLに遷移。'''
         try:
             self._driver.get(url)
-        except InvalidArgumentException as e:
-            print(f'{type(e).__name__}: {e}')
-        except TimeoutException as e:
+        except (InvalidArgumentException, TimeoutException) as e:
             print(f'{type(e).__name__}: {e}')
         else:
             time.sleep(1)
