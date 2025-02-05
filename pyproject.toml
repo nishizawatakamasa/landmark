@@ -3,7 +3,6 @@ name = 'landmark'
 version = '0.1'
 dependencies = [
     'pandas >= 2.2.3',
-    'requests >= 2.32.3',
     'selenium >= 4.27.1',
     'tqdm >= 4.67.1',
     'pyarrow >= 16.1.0',
