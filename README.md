@@ -5,11 +5,11 @@ landmarkは、Seleniumを簡単に使うためのPythonモジュールです。
 ブラウザの自動操作、スクレイピング、データの保存などを簡単に行えます。
 
 ## インストール方法
-landmark及びlandmarkを使うのに必要な全てのPythonライブラリは、以下のコマンドでインストールできます。  
+landmarkと、landmarkの実行に必要な全てのPythonライブラリは、以下のコマンドでインストールできます。  
 `pip install git+https://github.com/nishizawatakamasa/landmark`
 
 ## 必要な環境
-landmarkを使用するには、以下の環境が必要です。
+landmarkの実行には、以下の環境が必要です。
 * Python3.8以上
 * ライブラリ
     * pandas(バージョン2.2.3以上)
