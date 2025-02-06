@@ -25,6 +25,28 @@ class Landmark:
         self._driver = driver
         self._tables: dict[str, list[dict[str, str]]] = {}
 
+    def ss(self, selector: str, from_: Literal['driver'] | WebElement | None = 'driver') -> list[WebElement]:
+        '''セレクタを使用し、DOM(全体かサブセット)からWeb要素をリストで取得。'''
+        if from_ == 'driver':
+            return self._driver.find_elements(By.CSS_SELECTOR, selector)
+        return [] if from_ is None else from_.find_elements(By.CSS_SELECTOR, selector)
+
+    def s(self, selector: str, from_: Literal['driver'] | WebElement | None = 'driver') -> WebElement | None:
+        '''セレクタを使用し、DOM(全体かサブセット)からWeb要素を取得。'''
+        return elems[0] if (elems := self.ss(selector, from_)) else None
+
+    def re_filter(self, pattern: str, elems: list[WebElement]) -> list[WebElement]:
+        '''Web要素のtextContent属性値をNFKC正規化し、正規表現でフィルターにかける。'''
+        return [elem for elem in elems if re.findall(pattern, ud.normalize('NFKC', self.attr('textContent', elem)))]
+
+    def ss_re(self, selector: str, pattern: str, from_: Literal['driver'] | WebElement | None = 'driver') -> list[WebElement]:
+        '''セレクタと正規表現を使用し、DOM(全体かサブセット)からWeb要素をリストで取得。'''
+        return self.re_filter(pattern, self.ss(selector, from_))
+
+    def s_re(self, selector: str, pattern: str, from_: Literal['driver'] | WebElement | None = 'driver') -> WebElement | None:
+        '''セレクタと正規表現を使用し、DOM(全体かサブセット)からWeb要素を取得。'''
+        return elems[0] if (elems := self.ss_re(selector, pattern, from_)) else None
+
     def attr(self, attr_name: Literal['textContent', 'innerText', 'href', 'src'] | str, elem: WebElement | None) -> str | None:
         '''Web要素から任意の属性値を取得。'''
         if elem:
@@ -42,28 +64,6 @@ class Landmark:
     def next_sib(self, elem: WebElement | None) -> WebElement | None:
         '''渡されたWeb要素の弟要素を取得。'''
         return self._driver.execute_script('return arguments[0].nextElementSibling;', elem) if elem else None
-
-    def re_filter(self, pattern: str, elems: list[WebElement]) -> list[WebElement]:
-        '''Web要素のtextContent属性値をNFKC正規化し、正規表現でフィルターにかける。'''
-        return [elem for elem in elems if re.findall(pattern, ud.normalize('NFKC', self.attr('textContent', elem)))]
-
-    def ss(self, selector: str, from_: Literal['driver'] | WebElement | None = 'driver') -> list[WebElement]:
-        '''セレクタを使用し、DOM(全体かサブセット)からWeb要素をリストで取得。'''
-        if from_ == 'driver':
-            return self._driver.find_elements(By.CSS_SELECTOR, selector)
-        return [] if from_ is None else from_.find_elements(By.CSS_SELECTOR, selector)
-
-    def ss_re(self, selector: str, pattern: str, from_: Literal['driver'] | WebElement | None = 'driver') -> list[WebElement]:
-        '''セレクタと正規表現を使用し、DOM(全体かサブセット)からWeb要素をリストで取得。'''
-        return self.re_filter(pattern, self.ss(selector, from_))
-
-    def s(self, selector: str, from_: Literal['driver'] | WebElement | None = 'driver') -> WebElement | None:
-        '''セレクタを使用し、DOM(全体かサブセット)からWeb要素を取得。'''
-        return elems[0] if (elems := self.ss(selector, from_)) else None
-
-    def s_re(self, selector: str, pattern: str, from_: Literal['driver'] | WebElement | None = 'driver') -> WebElement | None:
-        '''セレクタと正規表現を使用し、DOM(全体かサブセット)からWeb要素を取得。'''
-        return elems[0] if (elems := self.ss_re(selector, pattern, from_)) else None
 
     def landmark(self, elems: list[WebElement], class_name: str) -> None:
         '''Web要素に任意のクラスを追加する。
